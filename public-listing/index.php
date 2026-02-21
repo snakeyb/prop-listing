@@ -22,6 +22,73 @@ if (empty($ESPOCRM_URL) || empty($ESPOCRM_API_KEY)) {
     die('<!DOCTYPE html><html><head><title>Configuration Error</title></head><body style="font-family:sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;"><div style="text-align:center;max-width:400px;"><h1>Configuration Required</h1><p>EspoCRM URL and API Key must be configured. Set ESPOCRM_URL and ESPOCRM_API_KEY as environment variables or create a config.php file.</p></div></body></html>');
 }
 
+// --- Rate Limiting (file-based, per IP) ---
+$RATE_LIMIT_MAX = 30;           // max requests per window
+$RATE_LIMIT_WINDOW = 60;        // window in seconds
+$RATE_LIMIT_DIR = sys_get_temp_dir() . '/property_listing_ratelimit';
+
+if (!is_dir($RATE_LIMIT_DIR)) {
+    @mkdir($RATE_LIMIT_DIR, 0755, true);
+}
+
+function checkRateLimit(string $dir, int $max, int $window): bool {
+    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $file = $dir . '/' . md5($ip) . '.json';
+
+    $now = time();
+    $data = ['count' => 0, 'reset' => $now + $window];
+
+    if (file_exists($file)) {
+        $raw = @file_get_contents($file);
+        if ($raw !== false) {
+            $stored = json_decode($raw, true);
+            if (is_array($stored) && isset($stored['reset']) && $stored['reset'] > $now) {
+                $data = $stored;
+            }
+        }
+    }
+
+    $data['count']++;
+    @file_put_contents($file, json_encode($data), LOCK_EX);
+
+    header('X-RateLimit-Limit: ' . $max);
+    header('X-RateLimit-Remaining: ' . max(0, $max - $data['count']));
+    header('X-RateLimit-Reset: ' . $data['reset']);
+
+    if ($data['count'] > $max) {
+        $retryAfter = $data['reset'] - $now;
+        header('Retry-After: ' . $retryAfter);
+        http_response_code(429);
+        die('<!DOCTYPE html><html><head><title>Too Many Requests</title></head><body style="font-family:sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;"><div style="text-align:center;max-width:400px;"><h1>Too Many Requests</h1><p>Please wait a moment before trying again.</p></div></body></html>');
+    }
+
+    return true;
+}
+
+checkRateLimit($RATE_LIMIT_DIR, $RATE_LIMIT_MAX, $RATE_LIMIT_WINDOW);
+
+// --- Caching ---
+$CACHE_DIR = sys_get_temp_dir() . '/property_listing_cache';
+$PROPERTY_CACHE_TTL = 300;      // 5 minutes
+$ATTACHMENT_CACHE_TTL = 3600;   // 1 hour
+
+if (!is_dir($CACHE_DIR)) {
+    @mkdir($CACHE_DIR, 0755, true);
+}
+
+function getCache(string $dir, string $key, int $ttl): string|false {
+    $file = $dir . '/' . md5($key) . '.cache';
+    if (file_exists($file) && (time() - filemtime($file)) < $ttl) {
+        return file_get_contents($file);
+    }
+    return false;
+}
+
+function setCache(string $dir, string $key, string $data): void {
+    $file = $dir . '/' . md5($key) . '.cache';
+    @file_put_contents($file, $data, LOCK_EX);
+}
+
 function fetchFromEspo(string $path, string $baseUrl, string $apiKey): array|false {
     $url = rtrim($baseUrl, '/') . '/api/v1/' . ltrim($path, '/');
     
@@ -48,11 +115,24 @@ function fetchFromEspo(string $path, string $baseUrl, string $apiKey): array|fal
     return json_decode($response, true) ?: false;
 }
 
-// Handle image proxy requests
+// Handle image proxy requests (with caching)
 if (isset($_GET['attachment'])) {
     $attachmentId = preg_replace('/[^a-zA-Z0-9]/', '', $_GET['attachment']);
+    $cacheKey = 'attachment_' . $attachmentId;
+
+    $cachedMeta = getCache($CACHE_DIR, $cacheKey . '_meta', $ATTACHMENT_CACHE_TTL);
+    $cachedData = getCache($CACHE_DIR, $cacheKey . '_data', $ATTACHMENT_CACHE_TTL);
+
+    if ($cachedMeta !== false && $cachedData !== false) {
+        header('Content-Type: ' . $cachedMeta);
+        header('Cache-Control: public, max-age=86400');
+        header('X-Cache: HIT');
+        echo $cachedData;
+        exit;
+    }
+
     $url = rtrim($ESPOCRM_URL, '/') . '/api/v1/Attachment/file/' . $attachmentId;
-    
+
     $ch = curl_init();
     curl_setopt_array($ch, [
         CURLOPT_URL => $url,
@@ -63,15 +143,18 @@ if (isset($_GET['attachment'])) {
         CURLOPT_TIMEOUT => 30,
         CURLOPT_SSL_VERIFYPEER => true,
     ]);
-    
+
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE) ?: 'image/jpeg';
     curl_close($ch);
-    
+
     if ($httpCode === 200 && $response !== false) {
+        setCache($CACHE_DIR, $cacheKey . '_meta', $contentType);
+        setCache($CACHE_DIR, $cacheKey . '_data', $response);
         header('Content-Type: ' . $contentType);
         header('Cache-Control: public, max-age=86400');
+        header('X-Cache: MISS');
         echo $response;
     } else {
         http_response_code(404);
@@ -80,18 +163,26 @@ if (isset($_GET['attachment'])) {
     exit;
 }
 
-// Get property ID from URL
+// Get property ID from URL (with caching)
 $propertyId = isset($_GET['id']) ? preg_replace('/[^a-zA-Z0-9]/', '', $_GET['id']) : null;
 
 $property = null;
 $error = null;
 
 if ($propertyId) {
-    $data = fetchFromEspo('CUnits/' . $propertyId, $ESPOCRM_URL, $ESPOCRM_API_KEY);
-    if ($data === false) {
-        $error = 'The property you are looking for could not be found.';
+    $cacheKey = 'property_' . $propertyId;
+    $cached = getCache($CACHE_DIR, $cacheKey, $PROPERTY_CACHE_TTL);
+
+    if ($cached !== false) {
+        $property = json_decode($cached, true);
     } else {
-        $property = $data;
+        $data = fetchFromEspo('CUnits/' . $propertyId, $ESPOCRM_URL, $ESPOCRM_API_KEY);
+        if ($data === false) {
+            $error = 'The property you are looking for could not be found.';
+        } else {
+            $property = $data;
+            setCache($CACHE_DIR, $cacheKey, json_encode($data));
+        }
     }
 } else {
     $error = 'No property ID provided. Please add ?id=YOUR_PROPERTY_ID to the URL.';
