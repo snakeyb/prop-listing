@@ -16,6 +16,7 @@ import {
   X,
   Building2,
   Image as ImageIcon,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -405,6 +406,17 @@ export default function PropertyListing() {
                       {property.addressPostalCode}
                     </p>
                   )}
+                  <a
+                    href={`https://www.google.co.uk/maps/search/${encodeURIComponent(fullAddress)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-sm mt-2 underline hover:opacity-80 transition-opacity"
+                    style={{ color: '#4A6492' }}
+                    data-testid="link-google-maps"
+                  >
+                    View on Google Maps
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
                 </div>
               </div>
             </CardContent>
