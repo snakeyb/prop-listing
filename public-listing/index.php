@@ -115,7 +115,7 @@ function getAddress(array $property): string {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $pageTitle ?> | Property Listing</title>
+    <title><?= $pageTitle ?> | Placement Findr Property Listing</title>
     <meta name="description" content="<?= $property ? htmlspecialchars(getAddress($property)) : 'Property listing' ?>">
     <meta property="og:title" content="<?= $pageTitle ?>">
     <meta property="og:type" content="website">
@@ -132,8 +132,8 @@ function getAddress(array $property): string {
             --fg-secondary: #666666;
             --fg-tertiary: #999999;
             --border: #e8e8e8;
-            --primary: #3b82f6;
-            --primary-light: rgba(59, 130, 246, 0.1);
+            --primary: #4A6492;
+            --primary-light: rgba(74, 100, 146, 0.1);
             --radius: 0.375rem;
             --shadow: 0 1px 3px rgba(0,0,0,0.06);
             --font: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -147,8 +147,8 @@ function getAddress(array $property): string {
                 --fg-secondary: #b3b3b3;
                 --fg-tertiary: #808080;
                 --border: #2d2d2d;
-                --primary: #60a5fa;
-                --primary-light: rgba(96, 165, 250, 0.1);
+                --primary: #7A94C2;
+                --primary-light: rgba(74, 100, 146, 0.15);
                 --shadow: 0 1px 3px rgba(0,0,0,0.2);
             }
         }
@@ -487,7 +487,7 @@ function getAddress(array $property): string {
     <div class="header">
         <div class="container">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-            <span class="header-title">Property Listing</span>
+            <span class="header-title">Placement Findr Property Listing</span>
         </div>
     </div>
     <div class="error-state">
@@ -504,7 +504,7 @@ function getAddress(array $property): string {
     <div class="header">
         <div class="container">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-            <span class="header-title">Property Listing</span>
+            <span class="header-title">Placement Findr Property Listing</span>
         </div>
     </div>
 
@@ -634,26 +634,13 @@ function getAddress(array $property): string {
                 </div>
             </div>
 
-            <?php if (!empty($property['propertyPartnerName'])): ?>
-            <div class="section">
-                <h2 class="section-title">Listed by</h2>
-                <div class="info-card">
-                    <div class="info-card-row">
-                        <div class="detail-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                        </div>
-                        <div style="font-weight: 500;"><?= htmlspecialchars($property['propertyPartnerName']) ?></div>
-                    </div>
-                </div>
-            </div>
-            <?php endif; ?>
 
         </div>
     </main>
 
     <div class="footer">
         <div class="container">
-            Property listing provided by <?= htmlspecialchars($property['propertyPartnerName'] ?? 'Property Explorer') ?>
+            Property listing provided by <a href="https://propertypipeline.co.uk/" target="_blank" rel="noopener noreferrer" style="color: var(--primary); text-decoration: underline;">PropertyPipeline</a>
         </div>
     </div>
 

@@ -213,7 +213,7 @@ function PropertyDetailItem({
 }) {
   return (
     <div className="flex items-center gap-3 py-3" data-testid={`detail-${label.toLowerCase().replace(/\s/g, "-")}`}>
-      <div className="flex items-center justify-center w-10 h-10 rounded-md bg-primary/10 text-primary">
+      <div className="flex items-center justify-center w-10 h-10 rounded-md" style={{ backgroundColor: 'rgba(74, 100, 146, 0.1)', color: '#4A6492' }}>
         <Icon className="w-5 h-5" />
       </div>
       <div>
@@ -325,8 +325,8 @@ export default function PropertyListing() {
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-40">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-2">
-            <Building2 className="w-6 h-6 text-primary" />
-            <span className="font-semibold text-lg" data-testid="text-header-title">Property Listing</span>
+            <Building2 className="w-6 h-6" style={{ color: '#4A6492' }} />
+            <span className="font-semibold text-lg" data-testid="text-header-title">Placement Findr Property Listing</span>
           </div>
         </div>
       </header>
@@ -390,7 +390,7 @@ export default function PropertyListing() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
-                <div className="flex items-center justify-center w-10 h-10 rounded-md bg-primary/10 text-primary flex-shrink-0">
+                <div className="flex items-center justify-center w-10 h-10 rounded-md flex-shrink-0" style={{ backgroundColor: 'rgba(74, 100, 146, 0.1)', color: '#4A6492' }}>
                   <MapPin className="w-5 h-5" />
                 </div>
                 <div>
@@ -411,26 +411,21 @@ export default function PropertyListing() {
           </Card>
         </div>
 
-        {property.propertyPartnerName && (
-          <div className="mb-8" data-testid="property-partner-section">
-            <h2 className="text-lg font-semibold mb-3">Listed by</h2>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-md bg-primary/10 text-primary flex-shrink-0">
-                    <Building2 className="w-5 h-5" />
-                  </div>
-                  <p className="font-medium" data-testid="text-partner-name">{property.propertyPartnerName}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
       </main>
 
       <footer className="border-t py-6 mt-8">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm text-muted-foreground">
-          Property listing provided by {property.propertyPartnerName || "Property Explorer"}
+          Property listing provided by{" "}
+          <a
+            href="https://propertypipeline.co.uk/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:opacity-80 transition-opacity"
+            style={{ color: '#4A6492' }}
+            data-testid="link-property-pipeline"
+          >
+            PropertyPipeline
+          </a>
         </div>
       </footer>
     </div>
