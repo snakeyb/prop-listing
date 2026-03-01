@@ -19,6 +19,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { apiUrl } from "@/lib/queryClient";
 
 interface Property {
   id: string;
@@ -72,7 +73,7 @@ function ImageGallery({ property }: { property: Property }) {
           data-testid="main-image-container"
         >
           <img
-            src={`/api/attachment/${photos[selectedIndex]}`}
+            src={apiUrl(`/api/attachment/${photos[selectedIndex]}`)}
             alt={property.propertyPhotosNames[photos[selectedIndex]] || property.name}
             className="w-full h-full object-cover transition-transform duration-500"
             data-testid="main-image"
@@ -127,7 +128,7 @@ function ImageGallery({ property }: { property: Property }) {
                 data-testid={`thumbnail-${index}`}
               >
                 <img
-                  src={`/api/attachment/${photoId}`}
+                  src={apiUrl(`/api/attachment/${photoId}`)}
                   alt={property.propertyPhotosNames[photoId] || `Photo ${index + 1}`}
                   className="w-full h-full object-cover"
                   loading="lazy"
@@ -185,7 +186,7 @@ function ImageGallery({ property }: { property: Property }) {
 
           <div className="max-w-[90vw] max-h-[85vh] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
             <img
-              src={`/api/attachment/${photos[selectedIndex]}`}
+              src={apiUrl(`/api/attachment/${photos[selectedIndex]}`)}
               alt={property.propertyPhotosNames[photos[selectedIndex]] || property.name}
               className="max-w-full max-h-[85vh] object-contain rounded-md"
               data-testid="lightbox-image"

@@ -141,7 +141,7 @@ export async function registerRoutes(
       res.setHeader("X-Cache", "MISS");
       return res.json(property);
     } catch (error: any) {
-      console.error("Error fetching property:", error);
+      if (process.env.NODE_ENV !== "production") console.error("Error fetching property:", error);
       return res.status(500).json({ error: "Failed to fetch property data" });
     }
   });
@@ -176,7 +176,7 @@ export async function registerRoutes(
       res.setHeader("X-Cache", "MISS");
       return res.send(buffer);
     } catch (error: any) {
-      console.error("Error fetching attachment:", error);
+      if (process.env.NODE_ENV !== "production") console.error("Error fetching attachment:", error);
       return res.status(500).json({ error: "Failed to fetch attachment" });
     }
   });

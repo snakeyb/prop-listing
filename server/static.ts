@@ -10,9 +10,10 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  const basePath = process.env.BASE_PATH || "/";
 
-  // fall through to index.html if the file doesn't exist
+  app.use(basePath, express.static(distPath));
+
   app.use("/{*path}", (_req, res) => {
     res.sendFile(path.resolve(distPath, "index.html"));
   });

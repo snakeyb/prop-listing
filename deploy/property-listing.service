@@ -1,0 +1,18 @@
+[Unit]
+Description=Property Listing Node.js App
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/property-listing
+ExecStart=/usr/bin/node dist/index.cjs
+Restart=on-failure
+RestartSec=5
+EnvironmentFile=/etc/property-listing/env
+Environment=NODE_ENV=production
+Environment=PORT=5001
+Environment=BASE_PATH=/listing/
+
+[Install]
+WantedBy=multi-user.target
