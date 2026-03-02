@@ -12,7 +12,10 @@ export function serveStatic(app: Express) {
 
   const basePath = process.env.BASE_PATH || "/";
 
-  app.use(basePath, express.static(distPath));
+  app.use("/", express.static(distPath));
+  if (basePath !== "/") {
+    app.use(basePath, express.static(distPath));
+  }
 
   app.use("/{*path}", (_req, res) => {
     res.sendFile(path.resolve(distPath, "index.html"));
