@@ -1,5 +1,6 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
+import sharp from "sharp";
 
 const ESPOCRM_URL = process.env.ESPOCRM_URL || "";
 const ESPOCRM_API_KEY = process.env.ESPOCRM_API_KEY || "";
@@ -149,8 +150,10 @@ export async function registerRoutes(
   app.get("/api/attachment/:id", async (req, res) => {
     try {
       const { id } = req.params;
+      const width = req.query.w ? parseInt(req.query.w as string, 10) : null;
+      const cacheKey = width ? `${id}_w${width}` : id;
 
-      const cached = getCached(attachmentCache, id);
+      const cached = getCached(attachmentCache, cacheKey);
       if (cached) {
         res.setHeader("Content-Type", cached.contentType);
         res.setHeader("Cache-Control", "public, max-age=86400");
@@ -158,18 +161,33 @@ export async function registerRoutes(
         return res.send(cached.buffer);
       }
 
-      const response = await fetchFromEspo(`Attachment/file/${id}`);
+      const origCached = getCached(attachmentCache, id);
+      let buffer: Buffer;
+      let contentType: string;
 
-      if (!response.ok) {
-        return res.status(response.status).json({
-          error: `Failed to fetch attachment: ${response.statusText}`,
-        });
+      if (origCached) {
+        buffer = origCached.buffer;
+        contentType = origCached.contentType;
+      } else {
+        const response = await fetchFromEspo(`Attachment/file/${id}`);
+        if (!response.ok) {
+          return res.status(response.status).json({
+            error: `Failed to fetch attachment: ${response.statusText}`,
+          });
+        }
+        contentType = response.headers.get("content-type") || "image/jpeg";
+        buffer = Buffer.from(await response.arrayBuffer());
+        setCache(attachmentCache, id, { buffer, contentType }, ATTACHMENT_CACHE_TTL);
       }
 
-      const contentType = response.headers.get("content-type") || "image/jpeg";
-      const buffer = Buffer.from(await response.arrayBuffer());
-
-      setCache(attachmentCache, id, { buffer, contentType }, ATTACHMENT_CACHE_TTL);
+      if (width && width > 0 && contentType.startsWith("image/")) {
+        buffer = await sharp(buffer)
+          .resize({ width, withoutEnlargement: true })
+          .jpeg({ quality: 80 })
+          .toBuffer();
+        contentType = "image/jpeg";
+        setCache(attachmentCache, cacheKey, { buffer, contentType }, ATTACHMENT_CACHE_TTL);
+      }
 
       res.setHeader("Content-Type", contentType);
       res.setHeader("Cache-Control", "public, max-age=86400");

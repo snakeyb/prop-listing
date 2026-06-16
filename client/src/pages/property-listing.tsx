@@ -73,7 +73,7 @@ function ImageGallery({ property }: { property: Property }) {
           data-testid="main-image-container"
         >
           <img
-            src={apiUrl(`/api/attachment/${photos[selectedIndex]}`)}
+            src={apiUrl(`/api/attachment/${photos[selectedIndex]}?w=1200`)}
             alt={property.propertyPhotosNames[photos[selectedIndex]] || property.name}
             className="w-full h-full object-cover transition-transform duration-500"
             data-testid="main-image"
@@ -128,7 +128,7 @@ function ImageGallery({ property }: { property: Property }) {
                 data-testid={`thumbnail-${index}`}
               >
                 <img
-                  src={apiUrl(`/api/attachment/${photoId}`)}
+                  src={apiUrl(`/api/attachment/${photoId}?w=200`)}
                   alt={property.propertyPhotosNames[photoId] || `Photo ${index + 1}`}
                   className="w-full h-full object-cover"
                   loading="lazy"
