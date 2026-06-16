@@ -16,11 +16,9 @@ This creates the `dist/` folder with everything bundled — no `node_modules` ne
 
 ## 2. Copy dist to server
 
-```bash
-scp -r dist/ yourserver:/opt/property-listing/dist/
-```
+The `dist/` folder is now committed to the repo, so `git pull` on the server will always fetch the latest pre-built version. No build step is needed on the server.
 
-Only the `dist/` folder is needed. It contains:
+It contains:
 - `dist/index.cjs` — the server bundle (all dependencies included)
 - `dist/public/` — the built frontend assets
 
@@ -77,11 +75,17 @@ Visit `https://yourdomain.com/listing/property/YOUR_PROPERTY_ID`
 ## Updating
 
 To deploy a new version:
+1. Make changes in Replit
+2. Run `npm run build` in Replit
+3. Commit and push to GitHub (including the `dist/` folder)
+4. On your server:
+
 ```bash
-npm run build
-scp -r dist/ yourserver:/opt/property-listing/dist/
-ssh yourserver 'sudo systemctl restart property-listing'
+git pull
+sudo systemctl restart property-listing
 ```
+
+No `npm install` or `npm run build` needed on the server — ever.
 
 ## Notes
 
