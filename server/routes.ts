@@ -151,46 +151,61 @@ export async function registerRoutes(
     try {
       const { id } = req.params;
       const width = req.query.w ? parseInt(req.query.w as string, 10) : null;
-      const cacheKey = width ? `${id}_w${width}` : id;
 
-      const cached = getCached(attachmentCache, cacheKey);
-      if (cached) {
-        res.setHeader("Content-Type", cached.contentType);
-        res.setHeader("Cache-Control", "public, max-age=86400");
-        res.setHeader("X-Cache", "HIT");
-        return res.send(cached.buffer);
-      }
+      // Only cache resized outputs — never the full-resolution original.
+      // Full-res (lightbox) is proxied fresh each time to avoid holding
+      // large buffers in memory on a constrained server.
+      if (width && width > 0) {
+        const cacheKey = `${id}_w${width}`;
+        const cached = getCached(attachmentCache, cacheKey);
+        if (cached) {
+          res.setHeader("Content-Type", cached.contentType);
+          res.setHeader("Cache-Control", "public, max-age=86400");
+          res.setHeader("X-Cache", "HIT");
+          return res.send(cached.buffer);
+        }
 
-      const origCached = getCached(attachmentCache, id);
-      let buffer: Buffer;
-      let contentType: string;
-
-      if (origCached) {
-        buffer = origCached.buffer;
-        contentType = origCached.contentType;
-      } else {
         const response = await fetchFromEspo(`Attachment/file/${id}`);
         if (!response.ok) {
           return res.status(response.status).json({
             error: `Failed to fetch attachment: ${response.statusText}`,
           });
         }
-        contentType = response.headers.get("content-type") || "image/jpeg";
-        buffer = Buffer.from(await response.arrayBuffer());
-        setCache(attachmentCache, id, { buffer, contentType }, ATTACHMENT_CACHE_TTL);
+        const origContentType = response.headers.get("content-type") || "image/jpeg";
+        const origBuffer = Buffer.from(await response.arrayBuffer());
+
+        let outBuffer: Buffer;
+        let outContentType: string;
+
+        if (origContentType.startsWith("image/")) {
+          outBuffer = await sharp(origBuffer)
+            .resize({ width, withoutEnlargement: true })
+            .jpeg({ quality: 80 })
+            .toBuffer();
+          outContentType = "image/jpeg";
+        } else {
+          outBuffer = origBuffer;
+          outContentType = origContentType;
+        }
+
+        setCache(attachmentCache, cacheKey, { buffer: outBuffer, contentType: outContentType }, ATTACHMENT_CACHE_TTL);
+        res.setHeader("Content-Type", outContentType);
+        res.setHeader("Cache-Control", "public, max-age=86400");
+        res.setHeader("X-Cache", "MISS");
+        return res.send(outBuffer);
       }
 
-      if (width && width > 0 && contentType.startsWith("image/")) {
-        buffer = await sharp(buffer)
-          .resize({ width, withoutEnlargement: true })
-          .jpeg({ quality: 80 })
-          .toBuffer();
-        contentType = "image/jpeg";
-        setCache(attachmentCache, cacheKey, { buffer, contentType }, ATTACHMENT_CACHE_TTL);
+      // No width param — proxy full-res directly without caching
+      const response = await fetchFromEspo(`Attachment/file/${id}`);
+      if (!response.ok) {
+        return res.status(response.status).json({
+          error: `Failed to fetch attachment: ${response.statusText}`,
+        });
       }
-
+      const contentType = response.headers.get("content-type") || "image/jpeg";
+      const buffer = Buffer.from(await response.arrayBuffer());
       res.setHeader("Content-Type", contentType);
-      res.setHeader("Cache-Control", "public, max-age=86400");
+      res.setHeader("Cache-Control", "public, max-age=3600");
       res.setHeader("X-Cache", "MISS");
       return res.send(buffer);
     } catch (error: any) {
